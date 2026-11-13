@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-DocuFlow.Worker-8e4c1826-8bc6-4e86-a747-a58728daa364</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DocuFlow.Application\DocuFlow.Application.csproj" />
+    <ProjectReference Include="..\DocuFlow.Infrastructure\DocuFlow.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
