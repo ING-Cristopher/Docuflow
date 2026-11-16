@@ -59,9 +59,9 @@ cp .env.example .env
 ```
 
 ### 5. Levantar Servicios de Infraestructura con Docker Compose
-Inicia SQL Server 2022 y Azurite (emulador de Azure Blob Storage):
+Inicia PostgreSQL 17 y Azurite (emulador de Azure Blob Storage):
 ```bash
-docker compose up -d
+docker compose up -d postgres azurite
 ```
 
 Verifica el estado de los contenedores:
@@ -69,8 +69,10 @@ Verifica el estado de los contenedores:
 docker compose ps
 ```
 
-* **SQL Server:** `localhost:1433` (Usuario: `sa`, Contraseña por defecto: `DocuFlow_Dev_Pass123!`)
+* **PostgreSQL:** `localhost:5432` (Base de datos: `docuflow`, credenciales definidas en `.env`)
 * **Azurite (Blob Storage):** `http://127.0.0.1:10000`
+
+> Consulta [docs/postgresql-migration.md](docs/postgresql-migration.md) para más detalles sobre la configuración, migraciones de EF Core, respaldos y persistencia en PostgreSQL.
 
 ### 6. Ejecutar Backend (.NET 10)
 ```bash
@@ -106,7 +108,7 @@ npm run dev
 DocuFlow/
 ├── .env.example             # Plantilla de variables de entorno locales
 ├── .gitignore               # Reglas de exclusión de Git para .NET, Node y Docker
-├── docker-compose.yml       # Infraestructura local (SQL Server 2022 + Azurite)
+├── docker-compose.yml       # Infraestructura local (PostgreSQL 17 + Azurite)
 ├── AGENTS.md                # Directivas técnicas y arquitectura del proyecto
 ├── README.md                # Guía de configuración y documentación
 ├── docs/                    # Documentación técnica (arquitectura y auditoría)

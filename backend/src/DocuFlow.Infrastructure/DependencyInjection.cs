@@ -21,12 +21,12 @@ public static class DependencyInjection
         IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? configuration["SQL_CONNECTION_STRING"]
-            ?? throw new InvalidOperationException("Database connection string is not configured.");
+            ?? configuration["POSTGRES_CONNECTION_STRING"]
+            ?? throw new InvalidOperationException("PostgreSQL connection string is not configured.");
 
         services.AddDbContext<DocuFlowDbContext>(options =>
-            options.UseSqlServer(connectionString, sql =>
-                sql.MigrationsAssembly(typeof(DocuFlowDbContext).Assembly.FullName)));
+            options.UseNpgsql(connectionString, npgsql =>
+                npgsql.MigrationsAssembly(typeof(DocuFlowDbContext).Assembly.FullName)));
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<DocuFlowDbContext>());
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();

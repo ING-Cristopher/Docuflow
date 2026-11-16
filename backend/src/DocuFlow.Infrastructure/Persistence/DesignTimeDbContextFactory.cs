@@ -8,10 +8,10 @@ public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Doc
     public DocuFlowDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<DocuFlowDbContext>();
-        var connectionString = Environment.GetEnvironmentVariable("SQL_CONNECTION_STRING")
-            ?? "Server=localhost,1433;Database=DocuFlowDb;User Id=sa;Password=DocuFlow_Dev_Pass123!;TrustServerCertificate=True;";
+        var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
+            ?? "Host=localhost;Port=5432;Database=docuflow;Username=docuflow;Password=postgres";
 
-        optionsBuilder.UseSqlServer(connectionString);
+        optionsBuilder.UseNpgsql(connectionString);
         return new DocuFlowDbContext(optionsBuilder.Options);
     }
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Eye, FileText, Plus, Search } from 'lucide-react';
@@ -21,12 +21,19 @@ export function DocumentsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const initialStatusRaw = searchParams.get('status');
+  const urlSearch = searchParams.get('search') ?? '';
   const [page, setPage] = useState(1);
-  const [searchInput, setSearchInput] = useState('');
-  const [appliedSearch, setAppliedSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(urlSearch);
+  const [appliedSearch, setAppliedSearch] = useState(urlSearch);
   const [statusFilter, setStatusFilter] = useState<DocumentStatus | ''>(
     initialStatusRaw ? (Number(initialStatusRaw) as DocumentStatus) : '',
   );
+
+  useEffect(() => {
+    setSearchInput(urlSearch);
+    setAppliedSearch(urlSearch);
+    setPage(1);
+  }, [urlSearch]);
   const [typeFilter, setTypeFilter] = useState<DocumentType | ''>('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);

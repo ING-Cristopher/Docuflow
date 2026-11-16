@@ -1,4 +1,25 @@
 services:
+  postgres:
+    image: postgres:17.2-alpine
+    container_name: docuflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-docuflow}"
+      POSTGRES_USER: "${POSTGRES_USER:-docuflow}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}"
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-docuflow} -d $${POSTGRES_DB:-docuflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - docuflow-network
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: docuflow-sqlserver
@@ -44,6 +65,8 @@ services:
       - docuflow-network
 
 volumes:
+  postgres_data:
+    name: docuflow_postgres_data
   sqlserver_data:
     name: docuflow_sqlserver_data
   azurite_data:

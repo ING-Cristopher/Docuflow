@@ -62,7 +62,15 @@ public sealed class DocuFlowDbContext : DbContext, IApplicationDbContext
         modelBuilder.Entity<OrganizationMembership>()
             .HasQueryFilter(e => _tenantContext.OrganizationId == null || e.OrganizationId == _tenantContext.OrganizationId);
 
-        if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
+        if (Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL")
+        {
+            modelBuilder.Entity<Document>().Property(x => x.RowVersion).ValueGeneratedNever();
+            modelBuilder.Entity<Document>().Property<uint>("xmin").IsRowVersion();
+
+            modelBuilder.Entity<ExtractedField>().Property(x => x.RowVersion).ValueGeneratedNever();
+            modelBuilder.Entity<ExtractedField>().Property<uint>("xmin").IsRowVersion();
+        }
+        else if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {
             modelBuilder.Entity<Document>().Property(x => x.RowVersion).ValueGeneratedNever().IsConcurrencyToken();
             modelBuilder.Entity<ExtractedField>().Property(x => x.RowVersion).ValueGeneratedNever().IsConcurrencyToken();
