@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, CheckCircle2, Download, Pencil, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Download, Loader2, Pencil, Sparkles, XCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Badge, DocumentStatusBadge, ValidationSeverityBadge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -38,6 +38,14 @@ export function DocumentDetailPage() {
     queryKey: ['documents', 'detail', session?.organizationId, id],
     queryFn: () => documentsService.getById(id!),
     enabled: Boolean(id),
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      const inFlight =
+        status === DocumentStatus.Uploaded ||
+        status === DocumentStatus.Queued ||
+        status === DocumentStatus.Processing;
+      return inFlight ? 2000 : false;
+    },
   });
 
   const invalidateDoc = async () => {
@@ -122,6 +130,16 @@ export function DocumentDetailPage() {
   const doc = detailQuery.data;
   const isReviewableStatus =
     doc.status === DocumentStatus.PendingReview || doc.status === DocumentStatus.Extracted;
+  const isProcessing =
+    doc.status === DocumentStatus.Uploaded ||
+    doc.status === DocumentStatus.Queued ||
+    doc.status === DocumentStatus.Processing;
+
+  const summaryFieldNames = new Set(['resumendeldocumento', 'resumenejecutivo', 'resumen']);
+  const summaryField = doc.extractedFields.find((f) => summaryFieldNames.has(f.fieldName.toLowerCase()));
+  const otherFields = summaryField
+    ? doc.extractedFields.filter((f) => f.id !== summaryField.id)
+    : doc.extractedFields;
 
   return (
     <div className="space-y-6">
@@ -143,10 +161,11 @@ export function DocumentDetailPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto">
           <Button
             variant="secondary"
             onClick={handleDownload}
+            className="flex-1 sm:flex-initial"
             leftIcon={<Download className="h-4 w-4" aria-hidden="true" />}
           >
             Descargar archivo
@@ -156,12 +175,14 @@ export function DocumentDetailPage() {
               <Button
                 variant="danger"
                 onClick={() => setRejectOpen(true)}
+                className="flex-1 sm:flex-initial"
                 leftIcon={<XCircle className="h-4 w-4" aria-hidden="true" />}
               >
                 Rechazar
               </Button>
               <Button
                 onClick={() => setApproveOpen(true)}
+                className="flex-1 sm:flex-initial"
                 leftIcon={<CheckCircle2 className="h-4 w-4" aria-hidden="true" />}
               >
                 Aprobar
@@ -178,6 +199,54 @@ export function DocumentDetailPage() {
         <Alert tone="error" title="Error en procesamiento de IA">
           {doc.lastError}
         </Alert>
+      ) : null}
+
+      {isProcessing ? (
+        <div className="flex items-center gap-3 rounded-2xl border border-brand-200 bg-brand-50/70 p-4 text-sm text-brand-900">
+          <Loader2 className="h-5 w-5 shrink-0 animate-spin text-brand-600" aria-hidden="true" />
+          <div>
+            <p className="font-semibold">Analizando documento y generando resumen con IA…</p>
+            <p className="text-xs text-brand-700">
+              Esta vista se actualizará automáticamente en cuanto termine la extracción.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
+      {summaryField ? (
+        <Card className="border-brand-200/80 bg-gradient-to-br from-white via-white to-brand-50/40">
+          <CardHeader
+            title="Resumen del documento (IA)"
+            description={`Síntesis automática del contenido · Confianza ${formatConfidence(summaryField.confidence)}`}
+            action={
+              canReview && isReviewableStatus ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  leftIcon={<Pencil className="h-3 w-3" aria-hidden="true" />}
+                  onClick={() => {
+                    setEditingField(summaryField);
+                    setCorrectedValue(
+                      summaryField.correctedValue ?? summaryField.normalizedValue ?? summaryField.rawValue ?? '',
+                    );
+                  }}
+                >
+                  Corregir
+                </Button>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-700">
+                  <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                  Generado por IA
+                </span>
+              )
+            }
+          />
+          <CardContent>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-slate-800">
+              {summaryField.correctedValue ?? summaryField.normalizedValue ?? summaryField.rawValue ?? '—'}
+            </p>
+          </CardContent>
+        </Card>
       ) : null}
 
       {/* Review decision summary */}
@@ -204,50 +273,53 @@ export function DocumentDetailPage() {
       {/* Extracted fields */}
       <Card>
         <CardHeader
-          title="Campos extraídos por IA"
-          description="Niveles de confianza, sensibilidad financiera y estado de validación"
+          title="Información relevante extraída por IA"
+          description="Datos clave, entidades y hallazgos extraídos automáticamente del documento"
         />
         <CardContent className="p-0">
-          {doc.extractedFields.length === 0 ? (
+          {otherFields.length === 0 ? (
             <p className="p-5 text-sm text-slate-500">
-              Aún no hay campos extraídos para este documento.
+              {summaryField
+                ? 'No se detectaron campos adicionales además del resumen del documento.'
+                : 'Aún no hay información extraída para este documento.'}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-5 py-3">Campo</th>
-                    <th className="px-4 py-3">Valor detectado</th>
-                    <th className="px-4 py-3">Valor corregido</th>
-                    <th className="px-4 py-3">Confianza</th>
-                    <th className="px-4 py-3">Estado</th>
+                    <th className="px-4 py-3 sm:px-5">Dato / Campo</th>
+                    <th className="px-3 py-3 sm:px-4">Información extraída</th>
+                    <th className="hidden px-4 py-3 md:table-cell">Valor corregido</th>
+                    <th className="hidden px-4 py-3 sm:table-cell">Confianza</th>
+                    <th className="px-3 py-3 sm:px-4">Estado</th>
                     {canReview && isReviewableStatus ? (
-                      <th className="px-5 py-3 text-right">Edición</th>
+                      <th className="px-4 py-3 text-right sm:px-5">Edición</th>
                     ) : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {doc.extractedFields.map((field) => (
+                  {otherFields.map((field) => (
                     <tr key={field.id} className="hover:bg-slate-50/70">
-                      <td className="px-5 py-3">
+                      <td className="px-4 py-3 sm:px-5">
                         <p className="font-medium text-slate-900">{field.fieldName}</p>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {field.isFinanciallySensitive ? (
-                            <Badge tone="amber">Financiero</Badge>
-                          ) : null}
-                          {field.pageNumber ? (
-                            <span className="text-xs text-slate-400">Pág. {field.pageNumber}</span>
-                          ) : null}
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-slate-400">
+                          {field.pageNumber ? <span>Pág. {field.pageNumber}</span> : null}
+                          <span className="sm:hidden">· {formatConfidence(field.confidence)}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-slate-700">
-                        {field.normalizedValue ?? field.rawValue ?? '—'}
+                      <td className="px-3 py-3 text-slate-700 sm:px-4">
+                        <p className="break-words">{field.normalizedValue ?? field.rawValue ?? '—'}</p>
+                        {field.correctedValue ? (
+                          <p className="mt-1 text-xs font-medium text-brand-700 md:hidden">
+                            Corregido: {field.correctedValue}
+                          </p>
+                        ) : null}
                       </td>
-                      <td className="px-4 py-3 font-medium text-brand-700">
+                      <td className="hidden px-4 py-3 font-medium text-brand-700 md:table-cell">
                         {field.correctedValue ?? '—'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="hidden px-4 py-3 sm:table-cell">
                         <span
                           className={`text-xs font-semibold ${
                             field.confidence >= 0.85
@@ -260,7 +332,7 @@ export function DocumentDetailPage() {
                           {formatConfidence(field.confidence)}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-3 sm:px-4">
                         {field.isValidated ? (
                           <Badge tone="emerald">Validado</Badge>
                         ) : field.requiresReview ? (
@@ -270,7 +342,7 @@ export function DocumentDetailPage() {
                         )}
                       </td>
                       {canReview && isReviewableStatus ? (
-                        <td className="px-5 py-3 text-right">
+                        <td className="px-4 py-3 text-right sm:px-5">
                           <Button
                             variant="secondary"
                             size="sm"
@@ -336,23 +408,28 @@ export function DocumentDetailPage() {
             <table className="min-w-full divide-y divide-slate-100 text-sm">
               <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                 <tr>
-                  <th className="px-5 py-3">Versión</th>
-                  <th className="px-4 py-3">Archivo</th>
-                  <th className="px-4 py-3">Tamaño</th>
-                  <th className="px-4 py-3">SHA-256</th>
-                  <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3 sm:px-5">Versión</th>
+                  <th className="px-3 py-3 sm:px-4">Archivo</th>
+                  <th className="hidden px-4 py-3 sm:table-cell">Tamaño</th>
+                  <th className="hidden px-4 py-3 md:table-cell">SHA-256</th>
+                  <th className="px-3 py-3 sm:px-4">Fecha</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {doc.versions.map((ver) => (
                   <tr key={ver.id}>
-                    <td className="px-5 py-3 font-medium">v{ver.versionNumber}</td>
-                    <td className="px-4 py-3 text-slate-700">{ver.originalFileName}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatBytes(ver.sizeBytes)}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-slate-500">
+                    <td className="px-4 py-3 font-medium sm:px-5">v{ver.versionNumber}</td>
+                    <td className="max-w-[160px] truncate px-3 py-3 text-slate-700 sm:max-w-none sm:px-4">
+                      {ver.originalFileName}
+                      <span className="mt-0.5 block text-[11px] text-slate-400 sm:hidden">
+                        {formatBytes(ver.sizeBytes)}
+                      </span>
+                    </td>
+                    <td className="hidden px-4 py-3 text-slate-600 sm:table-cell">{formatBytes(ver.sizeBytes)}</td>
+                    <td className="hidden px-4 py-3 font-mono text-xs text-slate-500 md:table-cell">
                       {ver.sha256Hash.slice(0, 16)}…
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{formatDateTime(ver.createdAt)}</td>
+                    <td className="px-3 py-3 text-xs text-slate-500 sm:px-4">{formatDateTime(ver.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

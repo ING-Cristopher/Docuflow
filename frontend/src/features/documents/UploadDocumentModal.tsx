@@ -151,13 +151,14 @@ export function UploadDocumentModal({ open, onClose, onUploaded }: UploadDocumen
           {fileError ? <p className="mt-1 text-xs text-rose-600">{fileError}</p> : null}
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={handleClose} disabled={uploadMutation.isPending}>
+        <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <Button variant="secondary" onClick={handleClose} disabled={uploadMutation.isPending} className="w-full sm:w-auto">
             Cancelar
           </Button>
           <Button
             type="submit"
             isLoading={uploadMutation.isPending}
+            className="w-full sm:w-auto"
             leftIcon={<UploadCloud className="h-4 w-4" aria-hidden="true" />}
           >
             Subir y encolar

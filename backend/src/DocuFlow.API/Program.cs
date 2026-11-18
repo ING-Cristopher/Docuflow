@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 using DocuFlow.API.Middleware;
 using DocuFlow.API.Security;
 using DocuFlow.Application;
@@ -108,6 +109,39 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy(PolicyNames.RequireOwner, p => p.RequireRole(
         nameof(OrganizationRole.Owner)));
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await context.HttpContext.Response.WriteAsJsonAsync(new Microsoft.AspNetCore.Mvc.ProblemDetails
+        {
+            Status = StatusCodes.Status429TooManyRequests,
+            Title = "RateLimitExceeded",
+            Detail = "Has superado el límite de consultas al asistente de IA. Intenta nuevamente en unos segundos."
+        }, token);
+    };
+
+    options.AddPolicy("agent-chat", httpContext =>
+    {
+        var userKey = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var partitionKey = !string.IsNullOrWhiteSpace(userKey)
+            ? $"user:{userKey}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey,
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            });
+    });
+});
+
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
@@ -130,6 +164,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("FrontendPolicy");
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapGet("/health", async (DocuFlowDbContext db, CancellationToken ct) =>

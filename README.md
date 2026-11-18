@@ -59,9 +59,14 @@ cp .env.example .env
 ```
 
 ### 5. Levantar Servicios de Infraestructura con Docker Compose
-Inicia PostgreSQL 17 y Azurite (emulador de Azure Blob Storage):
+Inicia PostgreSQL 17 (base de datos y cola de procesamiento) y almacenamiento privado local en volumen Docker:
 ```bash
-docker compose up -d postgres azurite
+docker compose up -d postgres
+```
+
+O levanta todo el stack backend (`postgres`, `api` y `worker`):
+```bash
+docker compose up -d --build
 ```
 
 Verifica el estado de los contenedores:
@@ -70,7 +75,7 @@ docker compose ps
 ```
 
 * **PostgreSQL:** `localhost:5432` (Base de datos: `docuflow`, credenciales definidas en `.env`)
-* **Azurite (Blob Storage):** `http://127.0.0.1:10000`
+* **Almacenamiento documental:** volumen Docker privado `docuflow_document_storage` (`/data/storage` en contenedores, o carpeta local de aplicación cuando se ejecuta fuera de Docker)
 
 > Consulta [docs/postgresql-migration.md](docs/postgresql-migration.md) para más detalles sobre la configuración, migraciones de EF Core, respaldos y persistencia en PostgreSQL.
 
@@ -108,7 +113,7 @@ npm run dev
 DocuFlow/
 ├── .env.example             # Plantilla de variables de entorno locales
 ├── .gitignore               # Reglas de exclusión de Git para .NET, Node y Docker
-├── docker-compose.yml       # Infraestructura local (PostgreSQL 17 + Azurite)
+├── docker-compose.yml       # Infraestructura local (PostgreSQL 17 + API + Worker)
 ├── AGENTS.md                # Directivas técnicas y arquitectura del proyecto
 ├── README.md                # Guía de configuración y documentación
 ├── docs/                    # Documentación técnica (arquitectura y auditoría)

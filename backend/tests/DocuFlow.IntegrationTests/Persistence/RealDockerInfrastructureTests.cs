@@ -1,8 +1,6 @@
-using Azure.Storage.Blobs;
-using Azure.Storage.Blobs.Models;
-using Azure.Storage.Queues;
 using DocuFlow.Application.Abstractions;
 using DocuFlow.Domain.Auditing;
+using DocuFlow.Domain.Common;
 using DocuFlow.Domain.Documents;
 using DocuFlow.Domain.Tenancy;
 using DocuFlow.Infrastructure.Messaging;
@@ -18,14 +16,11 @@ public sealed class RealDockerInfrastructureTests
         Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
         ?? "Host=127.0.0.1;Port=5432;Database=docuflow;Username=docuflow;Password=postgres";
 
-    private const string AzuriteConn =
-        "UseDevelopmentStorage=true;DevelopmentStorageProxyUri=http://127.0.0.1;";
-
     private static bool ShouldRunDockerTests =>
         string.Equals(Environment.GetEnvironmentVariable("DOCUFLOW_RUN_DOCKER_TESTS"), "true", StringComparison.OrdinalIgnoreCase);
 
     [Fact]
-    public async Task RealPostgreSql_And_Azurite_EndToEndSmokeTest()
+    public async Task RealPostgreSql_Storage_And_Queue_EndToEndSmokeTest()
     {
         if (!ShouldRunDockerTests)
             return;
@@ -79,38 +74,48 @@ public sealed class RealDockerInfrastructureTests
             Assert.Empty(await dbOrgB.AuditLogs.Where(a => a.Id == audit.Id).ToListAsync());
         }
 
-        // 2. Real Azurite Blob Storage (private container)
-        var blobServiceClient = new BlobServiceClient(AzuriteConn);
-        var blobService = new AzureBlobStorageService(blobServiceClient, "documents-audit-test");
-        var payloadBytes = "%PDF-1.4\n%RealAzuriteTest\n"u8.ToArray();
-        var blobPath = $"{orgA.Id}/{doc.Id}/v1/test.pdf";
-
-        await using (var uploadStream = new MemoryStream(payloadBytes))
+        // 2. Private local file storage (round-trip + path traversal guard)
+        var storageRoot = Path.Combine(Path.GetTempPath(), $"docuflow-storage-test-{Guid.NewGuid():N}");
+        try
         {
-            await blobService.UploadAsync(blobPath, uploadStream, "application/pdf");
+            var blobService = new LocalFileStorageService(storageRoot, "documents");
+            var payloadBytes = "%PDF-1.4\n%RealStorageTest\n"u8.ToArray();
+            var blobPath = $"{orgA.Id}/{doc.Id}/v1/test.pdf";
+
+            await using (var uploadStream = new MemoryStream(payloadBytes))
+            {
+                await blobService.UploadAsync(blobPath, uploadStream, "application/pdf");
+            }
+
+            await using (var downloaded = await blobService.DownloadAsync(blobPath))
+            using (var ms = new MemoryStream())
+            {
+                await downloaded.CopyToAsync(ms);
+                Assert.Equal(payloadBytes, ms.ToArray());
+            }
+
+            await Assert.ThrowsAsync<DomainException>(() => blobService.DownloadAsync("../../etc/passwd"));
+        }
+        finally
+        {
+            if (Directory.Exists(storageRoot))
+                Directory.Delete(storageRoot, recursive: true);
         }
 
-        var containerProps = await blobServiceClient.GetBlobContainerClient("documents-audit-test").GetPropertiesAsync();
-        Assert.Equal(PublicAccessType.None, containerProps.Value.PublicAccess);
-
-        await using (var downloaded = await blobService.DownloadAsync(blobPath))
-        using (var ms = new MemoryStream())
-        {
-            await downloaded.CopyToAsync(ms);
-            Assert.Equal(payloadBytes, ms.ToArray());
-        }
-
-        // 3. Real Azurite Queue Storage (enqueue, receive, delete)
-        var queueClient = new QueueClient(AzuriteConn, $"docuflow-audit-{Guid.NewGuid():N}"[..24]);
-        var queueService = new AzureDocumentQueueService(queueClient);
+        // 3. PostgreSQL queue (enqueue, lease with SKIP LOCKED, complete)
+        await using var queueService = new PostgresDocumentQueueService(PostgresConn, TimeSpan.FromSeconds(30));
         var msg = new DocumentProcessingMessage(orgA.Id, doc.Id, Guid.NewGuid());
         await queueService.EnqueueAsync(msg);
 
-        var batch = await queueService.ReceiveBatchAsync(maxMessages: 1);
-        Assert.Single(batch);
-        Assert.Equal(doc.Id, batch[0].Payload!.DocumentId);
-        await queueService.CompleteAsync(batch[0].MessageId, batch[0].PopReceipt);
-        await queueClient.DeleteIfExistsAsync();
+        var batch = await queueService.ReceiveBatchAsync(maxMessages: 32);
+        var leased = Assert.Single(batch, e => e.Payload?.DocumentId == doc.Id);
+        Assert.Equal(1, leased.DequeueCount);
+
+        // Leased message must be invisible to a concurrent receiver.
+        var secondBatch = await queueService.ReceiveBatchAsync(maxMessages: 32);
+        Assert.DoesNotContain(secondBatch, e => e.Payload?.DocumentId == doc.Id);
+
+        await queueService.CompleteAsync(leased.MessageId, leased.PopReceipt);
     }
 
     private sealed class StaticTenantContext(Guid organizationId, Guid userId, OrganizationRole role) : ITenantContext

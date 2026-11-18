@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ClipboardCheck } from 'lucide-react';
+import { ArrowRight, ClipboardCheck, FileText } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { DocumentStatusBadge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
@@ -29,11 +29,19 @@ export function ReviewsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Bandeja de revisión humana</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Documentos que requieren verificación, corrección de campos, aprobación o rechazo.
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">Control de calidad</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Bandeja de revisión humana</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Documentos que requieren verificación, corrección de campos, aprobación o rechazo.
+          </p>
+        </div>
+        {pendingQuery.data ? (
+          <span className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800">
+            {pendingQuery.data.totalCount} pendientes
+          </span>
+        ) : null}
       </div>
 
       <Card>
@@ -57,28 +65,47 @@ export function ReviewsPage() {
               <table className="min-w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-5 py-3">Título</th>
-                    <th className="px-4 py-3">Tipo</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3">Creado</th>
-                    <th className="px-5 py-3 text-right">Acción</th>
+                    <th className="px-4 py-3 sm:px-5">Título</th>
+                    <th className="hidden px-4 py-3 sm:table-cell">Tipo</th>
+                    <th className="px-3 py-3 sm:px-4">Estado</th>
+                    <th className="hidden px-4 py-3 md:table-cell">Creado</th>
+                    <th className="px-4 py-3 text-right sm:px-5">Acción</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {pendingQuery.data.items.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-slate-50/80">
-                      <td className="px-5 py-3 font-medium text-slate-900">{doc.title}</td>
-                      <td className="px-4 py-3 text-slate-600">{documentTypeLabels[doc.documentType]}</td>
-                      <td className="px-4 py-3">
+                    <tr key={doc.id} className="transition-colors hover:bg-slate-50/80">
+                      <td className="max-w-[180px] px-4 py-3.5 font-medium text-slate-900 sm:max-w-none sm:px-5">
+                        <div className="flex items-center gap-2.5 sm:gap-3">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                            <FileText className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <span className="block truncate">{doc.title}</span>
+                            <span className="mt-0.5 block truncate text-[11px] font-normal text-slate-400 md:hidden">
+                              <span className="sm:hidden">{documentTypeLabels[doc.documentType]} · </span>
+                              {formatDateTime(doc.createdAt)}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-600 sm:table-cell">
+                        {documentTypeLabels[doc.documentType]}
+                      </td>
+                      <td className="px-3 py-3.5 sm:px-4">
                         <DocumentStatusBadge status={doc.status} />
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{formatDateTime(doc.createdAt)}</td>
-                      <td className="px-5 py-3 text-right">
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-500 md:table-cell">
+                        {formatDateTime(doc.createdAt)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right sm:px-5">
                         <Link
                           to={`/documents/${doc.id}`}
-                          className="inline-flex items-center rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white shadow-sm shadow-brand-600/20 transition-colors hover:bg-brand-700 sm:px-3"
                         >
-                          Revisar documento
+                          <span className="sm:hidden">Revisar</span>
+                          <span className="hidden sm:inline">Revisar documento</span>
+                          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                         </Link>
                       </td>
                     </tr>

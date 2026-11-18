@@ -16,17 +16,22 @@ public sealed class DocumentProcessingService
     private readonly IDocumentIntelligenceService _intelligence;
     private readonly IDocumentQueueService _queueService;
     private readonly ILogger<DocumentProcessingService> _logger;
+    private readonly IDocumentAiAnalyzer _aiAnalyzer;
+
+    private const decimal AiTypeMismatchMinConfidence = 0.8m;
 
     public DocumentProcessingService(
         IApplicationDbContext dbContext,
         IBlobStorageService blobStorage,
         IDocumentIntelligenceService intelligence,
+        IDocumentAiAnalyzer aiAnalyzer,
         IDocumentQueueService queueService,
         ILogger<DocumentProcessingService> logger)
     {
         _dbContext = dbContext;
         _blobStorage = blobStorage;
         _intelligence = intelligence;
+        _aiAnalyzer = aiAnalyzer;
         _queueService = queueService;
         _logger = logger;
     }
@@ -85,6 +90,7 @@ public sealed class DocumentProcessingService
             _dbContext.ExtractedFields.AddRange(extractedEntities);
 
             var issues = ValidateExtractedFields(doc.OrganizationId, doc.Id, version.Id, analysis.DetectedType, extractedEntities);
+            issues.AddRange(await RunAiAnalysisAsync(doc, version.Id, analysis, cancellationToken));
             if (issues.Count > 0)
                 _dbContext.ValidationIssues.AddRange(issues);
 
@@ -169,6 +175,58 @@ public sealed class DocumentProcessingService
             await _dbContext.SaveChangesAsync(cancellationToken);
 
         return dispatched;
+    }
+
+    /// <summary>
+    /// Optional LLM stage. Its output is untrusted: it can only add review issues (max Warning),
+    /// never change values, approve, or fail the document. Failures degrade to OCR-only + human review.
+    /// </summary>
+    private async Task<List<ValidationIssue>> RunAiAnalysisAsync(
+        Document doc,
+        Guid versionId,
+        DocumentAnalysisResult analysis,
+        CancellationToken cancellationToken)
+    {
+        var issues = new List<ValidationIssue>();
+        try
+        {
+            var ai = await _aiAnalyzer.AnalyzeAsync(analysis.DetectedType, analysis.Fields, cancellationToken);
+            if (ai is null)
+                return issues;
+
+            if (ai.SuggestedType != DocumentType.Unknown &&
+                ai.SuggestedType != analysis.DetectedType &&
+                ai.Confidence >= AiTypeMismatchMinConfidence)
+            {
+                issues.Add(new ValidationIssue(
+                    doc.OrganizationId, doc.Id, versionId,
+                    "AI_TYPE_MISMATCH", null, ValidationSeverity.Warning,
+                    $"AI classified this document as {ai.SuggestedType} ({ai.Confidence:P0}) but OCR detected {analysis.DetectedType}."));
+            }
+
+            foreach (var finding in ai.Findings)
+            {
+                issues.Add(new ValidationIssue(
+                    doc.OrganizationId, doc.Id, versionId,
+                    finding.Code, finding.FieldName,
+                    finding.Severity == AiFindingSeverity.Info ? ValidationSeverity.Info : ValidationSeverity.Warning,
+                    $"[AI] {finding.Message}"));
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "AI analysis failed for document {DocumentId}; continuing with OCR only.", doc.Id);
+            issues.Add(new ValidationIssue(
+                doc.OrganizationId, doc.Id, versionId,
+                "AI_ANALYSIS_UNAVAILABLE", null, ValidationSeverity.Warning,
+                "AI analysis could not be completed; manual review required."));
+        }
+
+        return issues;
     }
 
     private static List<ValidationIssue> ValidateExtractedFields(

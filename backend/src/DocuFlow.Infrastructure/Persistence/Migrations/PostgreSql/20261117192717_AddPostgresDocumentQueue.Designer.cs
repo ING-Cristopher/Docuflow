@@ -3,6 +3,7 @@ using System;
 using DocuFlow.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DocuFlow.Infrastructure.Persistence.Migrations.PostgreSql
 {
     [DbContext(typeof(DocuFlowDbContext))]
-    partial class DocuFlowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261117192717_AddPostgresDocumentQueue")]
+    partial class AddPostgresDocumentQueue
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -561,6 +564,38 @@ namespace DocuFlow.Infrastructure.Persistence.Migrations.PostgreSql
                         .IsUnique();
 
                     b.ToTable("Users", (string)null);
+                });
+
+            modelBuilder.Entity("DocuFlow.Infrastructure.Messaging.DocumentQueueMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DequeueCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("EnqueuedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PayloadJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("PopReceipt")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("VisibleAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VisibleAt", "EnqueuedAt");
+
+                    b.ToTable("DocumentQueueMessages", (string)null);
                 });
 
             modelBuilder.Entity("DocuFlow.Domain.Documents.DocumentVersion", b =>

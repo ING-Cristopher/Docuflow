@@ -50,6 +50,15 @@ export function DocumentsPage() {
         documentType: typeFilter === '' ? undefined : typeFilter,
         search: appliedSearch,
       }),
+    refetchInterval: (query) => {
+      const hasInFlight = query.state.data?.items.some(
+        (d) =>
+          d.status === DocumentStatus.Uploaded ||
+          d.status === DocumentStatus.Queued ||
+          d.status === DocumentStatus.Processing,
+      );
+      return hasInFlight ? 3000 : false;
+    },
   });
 
   const handleDownload = async (id: string) => {
@@ -86,15 +95,17 @@ export function DocumentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Documentos</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Gestión documental, búsqueda, estado de extracción y descarga autorizada.
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">Gestión documental</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Documentos</h1>
+          <p className="mt-0.5 text-sm text-slate-500">
+            Búsqueda, estado de extracción con IA y descarga autorizada.
           </p>
         </div>
 
         {canUpload ? (
           <Button
             onClick={() => setUploadOpen(true)}
+            className="w-full sm:w-auto"
             leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
           >
             Cargar documento
@@ -105,20 +116,20 @@ export function DocumentsPage() {
       {downloadError ? <Alert tone="error">{downloadError}</Alert> : null}
 
       {/* Filters bar */}
-      <Card className="p-4">
-        <form onSubmit={handleSearchSubmit} className="grid gap-3 md:grid-cols-4">
-          <div className="relative md:col-span-2">
+      <Card className="p-3.5 sm:p-4">
+        <form onSubmit={handleSearchSubmit} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="relative sm:col-span-2">
             <Search
               className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400"
               aria-hidden="true"
             />
-            <input
+              <input
               type="search"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Buscar por título..."
               aria-label="Buscar documentos por título"
-              className="block w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-sm focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
 
@@ -134,7 +145,7 @@ export function DocumentsPage() {
                 setSearchParams(searchParams, { replace: true });
               }
             }}
-            className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
+            className="block w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
           >
             <option value="">Todos los estados</option>
             {statusOptions.map((st) => (
@@ -152,7 +163,7 @@ export function DocumentsPage() {
                 setTypeFilter(e.target.value === '' ? '' : (Number(e.target.value) as DocumentType));
                 setPage(1);
               }}
-              className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600"
+              className="block w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             >
               <option value="">Todos los tipos</option>
               {typeOptions.map((t) => (
@@ -195,46 +206,63 @@ export function DocumentsPage() {
               <table className="min-w-full divide-y divide-slate-100 text-sm">
                 <thead className="bg-slate-50 text-left text-xs font-medium text-slate-500">
                   <tr>
-                    <th className="px-5 py-3">Título</th>
-                    <th className="px-4 py-3">Tipo</th>
-                    <th className="px-4 py-3">Estado</th>
-                    <th className="px-4 py-3">Versión</th>
-                    <th className="px-4 py-3">Reintentos</th>
-                    <th className="px-4 py-3">Creado</th>
-                    <th className="px-5 py-3 text-right">Acciones</th>
+                    <th className="px-4 py-3 sm:px-5">Título</th>
+                    <th className="hidden px-4 py-3 sm:table-cell">Tipo</th>
+                    <th className="px-3 py-3 sm:px-4">Estado</th>
+                    <th className="hidden px-4 py-3 lg:table-cell">Versión</th>
+                    <th className="hidden px-4 py-3 lg:table-cell">Reintentos</th>
+                    <th className="hidden px-4 py-3 md:table-cell">Creado</th>
+                    <th className="px-4 py-3 text-right sm:px-5">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {documentsQuery.data.items.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-slate-50/80">
-                      <td className="px-5 py-3 font-medium text-slate-900">
-                        <Link to={`/documents/${doc.id}`} className="hover:text-brand-600">
-                          {doc.title}
+                    <tr key={doc.id} className="transition-colors hover:bg-slate-50/80">
+                      <td className="max-w-[180px] px-4 py-3.5 font-medium text-slate-900 sm:max-w-none sm:px-5">
+                        <Link to={`/documents/${doc.id}`} className="flex items-center gap-2.5 hover:text-brand-600 sm:gap-3">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                            <FileText className="h-4 w-4" aria-hidden="true" />
+                          </span>
+                          <div className="min-w-0">
+                            <span className="block truncate">{doc.title}</span>
+                            <span className="mt-0.5 block truncate text-[11px] font-normal text-slate-400 md:hidden">
+                              <span className="sm:hidden">{documentTypeLabels[doc.documentType]} · </span>
+                              v{doc.currentVersionNumber} · {formatDateTime(doc.createdAt)}
+                            </span>
+                          </div>
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-slate-600">{documentTypeLabels[doc.documentType]}</td>
-                      <td className="px-4 py-3">
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-600 sm:table-cell">
+                        {documentTypeLabels[doc.documentType]}
+                      </td>
+                      <td className="px-3 py-3.5 sm:px-4">
                         <DocumentStatusBadge status={doc.status} />
                       </td>
-                      <td className="px-4 py-3 text-slate-600">v{doc.currentVersionNumber}</td>
-                      <td className="px-4 py-3 text-slate-600">{doc.retryCount}</td>
-                      <td className="px-4 py-3 text-xs text-slate-500">{formatDateTime(doc.createdAt)}</td>
-                      <td className="px-5 py-3">
-                        <div className="flex justify-end gap-2">
+                      <td className="hidden px-4 py-3.5 text-xs font-medium text-slate-600 lg:table-cell">
+                        v{doc.currentVersionNumber}
+                      </td>
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-600 lg:table-cell">{doc.retryCount}</td>
+                      <td className="hidden px-4 py-3.5 text-xs text-slate-500 md:table-cell">
+                        {formatDateTime(doc.createdAt)}
+                      </td>
+                      <td className="px-4 py-3.5 sm:px-5">
+                        <div className="flex justify-end gap-1.5 sm:gap-2">
                           <Link
                             to={`/documents/${doc.id}`}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            aria-label={`Detalle de ${doc.title}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-brand-600"
                           >
                             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                            Detalle
+                            <span className="hidden sm:inline">Detalle</span>
                           </Link>
                           <button
                             type="button"
                             onClick={() => handleDownload(doc.id)}
-                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            aria-label={`Descargar ${doc.title}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50 hover:text-brand-600"
                           >
                             <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                            Descargar
+                            <span className="hidden sm:inline">Descargar</span>
                           </button>
                         </div>
                       </td>

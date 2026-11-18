@@ -11,7 +11,7 @@ Este documento describe la migración de la base de datos principal de **DocuFlo
    - Contenedor: `docuflow-postgres`, base de datos: `docuflow`, puerto: `5432`, política de reinicio: `unless-stopped`.
    - Volumen persistente `docuflow_postgres_data` montado en `/var/lib/postgresql/data`.
    - Healthcheck con `pg_isready`.
-   - El servicio `sqlserver` previo se conserva temporalmente sin eliminar su volumen (`docuflow_sqlserver_data`) para resguardo durante la transición.
+   - El servicio `sqlserver` y `azurite` fueron retirados de `docker-compose.yml` y `DocuFlow.Infrastructure.csproj` tras completar la migración a PostgreSQL (`PostgresDocumentQueueService` + `LocalFileStorageService`). El volumen heredado `docuflow_sqlserver_data` se conservó en el host sin eliminarse por precaución.
 
 2. **Variables de entorno (`.env.example`):**
    - Se agregaron `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT` y `POSTGRES_CONNECTION_STRING` sin credenciales reales en el repositorio.
@@ -22,8 +22,8 @@ Este documento describe la migración de la base de datos principal de **DocuFlo
    - `DocuFlowDbContext.cs` configura el control de concurrencia optimista para PostgreSQL mediante la columna del sistema `xmin` (`IsRowVersion()` sobre shadow property `uint`) en `Document` y `ExtractedField`, manteniendo intacto el comportamiento con SQLite para pruebas en memoria.
 
 4. **Estrategia de migraciones:**
-   - Las migraciones previas de SQL Server (`InitialCreate`, `AddOutboxAndConcurrencyTokens` y su snapshot) se conservaron intactas en `backend/src/DocuFlow.Infrastructure/Persistence/Migrations/SqlServer/` y se excluyeron de compilación en `DocuFlow.Infrastructure.csproj` para evitar mezclar historiales de proveedores distintos.
-   - Se generó un historial limpio e independiente para PostgreSQL en `backend/src/DocuFlow.Infrastructure/Persistence/Migrations/PostgreSql/` (`20261116010047_InitialPostgreSql`).
+   - Se eliminó el historial archivado de SQL Server y los paquetes `Microsoft.EntityFrameworkCore.SqlServer` y `Azure.*` de `DocuFlow.Infrastructure.csproj`.
+   - El historial activo e independiente para PostgreSQL vive en `backend/src/DocuFlow.Infrastructure/Persistence/Migrations/PostgreSql/` (`20261116010047_InitialPostgreSql` y `20261117192717_AddPostgresDocumentQueue`).
 
 ---
 
@@ -43,10 +43,10 @@ POSTGRES_CONNECTION_STRING=Host=localhost;Port=5432;Database=docuflow;Username=d
 
 ## 3. Cómo iniciar y detener el contenedor
 
-Iniciar PostgreSQL (y Azurite):
+Iniciar PostgreSQL (o todo el stack `postgres`, `api` y `worker`):
 
 ```bash
-docker compose up -d postgres azurite
+docker compose up -d postgres
 ```
 
 Verificar estado y healthcheck:

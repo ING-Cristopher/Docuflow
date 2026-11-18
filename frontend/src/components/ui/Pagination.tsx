@@ -14,11 +14,11 @@ export function Pagination({ page, pageSize, totalCount, onPageChange }: Paginat
   const end = Math.min(page * pageSize, totalCount);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-5 py-3 text-xs text-slate-600">
-      <span>
+    <div className="flex flex-col items-stretch justify-between gap-3 border-t border-slate-100 px-4 py-3 text-xs text-slate-600 sm:flex-row sm:items-center sm:px-5">
+      <span className="text-center sm:text-left">
         Mostrando <strong>{start}</strong>–<strong>{end}</strong> de <strong>{totalCount}</strong> registros
       </span>
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end">
         <Button
           variant="secondary"
           size="sm"

@@ -25,7 +25,7 @@ export function Modal({ open, title, description, onClose, children }: ModalProp
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-3 backdrop-blur-xs sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -33,9 +33,9 @@ export function Modal({ open, title, description, onClose, children }: ModalProp
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-lg rounded-xl border border-slate-200 bg-white shadow-xl">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4">
-          <div>
+      <div className="flex max-h-[calc(100dvh-1.5rem)] w-full max-w-lg flex-col rounded-2xl border border-slate-200 bg-white shadow-xl sm:max-h-[calc(100dvh-3rem)]">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
+          <div className="min-w-0">
             <h2 id="modal-title" className="text-base font-semibold text-slate-900">
               {title}
             </h2>
@@ -45,12 +45,12 @@ export function Modal({ open, title, description, onClose, children }: ModalProp
             type="button"
             onClick={onClose}
             aria-label="Cerrar ventana"
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="overflow-y-auto p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );

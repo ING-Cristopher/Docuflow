@@ -1,3 +1,5 @@
+using DocuFlow.Application.Abstractions;
+using DocuFlow.Application.AI;
 using DocuFlow.Application.Auditing;
 using DocuFlow.Application.Documents;
 using DocuFlow.Application.Processing;
@@ -15,6 +17,8 @@ public static class DependencyInjection
         services.AddScoped<DocumentReviewService>();
         services.AddScoped<DocumentProcessingService>();
         services.AddScoped<AuditService>();
+        services.AddScoped<IAgentTool, DocumentSummaryAgentTool>();
+        services.AddScoped<IAgentTool, DocumentExtractionAgentTool>();
         return services;
     }
 }

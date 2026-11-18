@@ -215,7 +215,8 @@ public sealed class DocuFlowApiFactory : WebApplicationFactory<Program>, IDispos
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.UseSetting("ConnectionStrings:DefaultConnection", "Server=localhost;Database=DocuFlowTest;");
+        builder.UseSetting("ConnectionStrings:DefaultConnection", "Host=localhost;Database=docuflow_test;");
+        builder.UseSetting("DOCUMENT_INTELLIGENCE_FORCE_MOCK", "true");
         builder.UseSetting("Jwt:SecretKey", "DOCUFLOW_TEST_ONLY_SECRET_KEY_MIN_32_CHARS");
         builder.ConfigureServices(services =>
         {

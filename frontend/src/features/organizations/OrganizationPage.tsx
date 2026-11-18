@@ -75,8 +75,9 @@ export function OrganizationPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Organización</h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="text-xs font-semibold uppercase tracking-wider text-brand-600">Multi-tenant</p>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Organización</h1>
+        <p className="mt-0.5 text-sm text-slate-500">
           Contexto activo de tenant, cambio de organización e incorporación de miembros.
         </p>
       </div>
@@ -91,7 +92,7 @@ export function OrganizationPage() {
           </div>
           <div>
             <p className="text-xs text-slate-500">OrganizationId</p>
-            <p className="mt-1 font-mono text-xs text-slate-700">{session.organizationId}</p>
+            <p className="mt-1 break-all font-mono text-xs text-slate-700">{session.organizationId}</p>
           </div>
           <div>
             <p className="text-xs text-slate-500">Tu rol actual</p>
@@ -116,16 +117,16 @@ export function OrganizationPage() {
           ) : membershipsQuery.isError ? (
             <Alert tone="error">{getApiErrorMessage(membershipsQuery.error)}</Alert>
           ) : (
-            <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+            <div className="divide-y divide-slate-100 rounded-xl border border-slate-200">
               {membershipsQuery.data?.map((membership) => {
                 const isCurrent = membership.organizationId === session.organizationId;
                 return (
                   <div
                     key={membership.organizationId}
-                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 transition-colors hover:bg-slate-50/60"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="rounded-lg bg-slate-100 p-2 text-slate-600">
+                      <div className="rounded-xl bg-brand-50 p-2.5 text-brand-600">
                         <Building2 className="h-4 w-4" aria-hidden="true" />
                       </div>
                       <div>
@@ -145,6 +146,7 @@ export function OrganizationPage() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="w-full sm:w-auto"
                         isLoading={switchMutation.isPending}
                         onClick={() => {
                           setSwitchError(null);
@@ -237,6 +239,7 @@ export function OrganizationPage() {
                 <Button
                   type="submit"
                   isLoading={isSubmitting}
+                  className="w-full sm:w-auto"
                   leftIcon={<UserPlus className="h-4 w-4" aria-hidden="true" />}
                 >
                   Añadir miembro

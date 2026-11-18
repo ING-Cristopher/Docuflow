@@ -4,7 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-DocuFlow.Worker-8e4c1826-8bc6-4e86-a747-a58728daa364</UserSecretsId>
+    <UserSecretsId>eba487cb-50f1-40d9-9d95-3bbe6eb9ae57</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

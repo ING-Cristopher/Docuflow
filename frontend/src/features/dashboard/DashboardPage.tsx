@@ -262,8 +262,11 @@ export function DashboardPage() {
           </p>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-          <Calendar className="ml-2 h-4 w-4 text-slate-400" aria-hidden="true" />
+        <div className="inline-flex w-full items-center justify-between gap-1.5 rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:w-auto sm:justify-start">
+          <div className="flex items-center gap-1.5">
+            <Calendar className="ml-2 h-4 w-4 text-slate-400" aria-hidden="true" />
+            <span className="text-xs text-slate-500 sm:hidden">Período:</span>
+          </div>
           <select
             aria-label="Rango de tiempo"
             value={periodDays}
@@ -309,9 +312,9 @@ export function DashboardPage() {
       </div>
 
       {/* Middle Row: Activity Chart + Document Type Donut + AI Highlight Card */}
-      <div className="grid gap-6 lg:grid-cols-12">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-12">
         {/* Actividad Reciente */}
-        <Card className="lg:col-span-5">
+        <Card className="md:col-span-1 lg:col-span-5">
           <CardHeader
             title="Actividad Reciente"
             action={
@@ -403,7 +406,7 @@ export function DashboardPage() {
         </Card>
 
         {/* Por Tipo de Documento */}
-        <Card className="lg:col-span-4">
+        <Card className="md:col-span-1 lg:col-span-4">
           <CardHeader
             title="Por Tipo de Documento"
             action={
@@ -477,7 +480,7 @@ export function DashboardPage() {
         </Card>
 
         {/* AI Highlight Card */}
-        <section className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-indigo-600 to-violet-600 p-6 text-white shadow-sm lg:col-span-3">
+        <section className="relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-indigo-600 to-violet-600 p-5 text-white shadow-sm sm:p-6 md:col-span-2 lg:col-span-3">
           <div
             className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10 blur-xl"
             aria-hidden="true"
@@ -537,11 +540,11 @@ export function DashboardPage() {
                 <table className="min-w-full divide-y divide-slate-100 text-sm">
                   <thead className="bg-slate-50/70 text-left text-xs font-semibold text-slate-500">
                     <tr>
-                      <th className="px-5 py-3">Documento</th>
-                      <th className="px-4 py-3">Tipo</th>
-                      <th className="px-4 py-3">Estado</th>
-                      <th className="px-4 py-3">Fecha</th>
-                      <th className="px-5 py-3 text-right">Acciones</th>
+                      <th className="px-4 py-3 sm:px-5">Documento</th>
+                      <th className="hidden px-4 py-3 sm:table-cell">Tipo</th>
+                      <th className="px-3 py-3 sm:px-4">Estado</th>
+                      <th className="hidden px-4 py-3 md:table-cell">Fecha</th>
+                      <th className="px-4 py-3 text-right sm:px-5">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -549,29 +552,35 @@ export function DashboardPage() {
                       const meta = typeColors[doc.documentType] ?? typeColors[DocumentType.Other];
                       return (
                         <tr key={doc.id} className="transition-colors hover:bg-slate-50/80">
-                          <td className="px-5 py-3">
+                          <td className="max-w-[180px] px-4 py-3 sm:max-w-none sm:px-5">
                             <Link
                               to={`/documents/${doc.id}`}
-                              className="flex items-center gap-3 font-medium text-slate-900 hover:text-brand-600"
+                              className="flex items-center gap-2.5 font-medium text-slate-900 hover:text-brand-600 sm:gap-3"
                             >
                               <span
                                 className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[10px] font-bold ${meta.badge}`}
                               >
                                 <FileText className="h-4 w-4" aria-hidden="true" />
                               </span>
-                              <span className="truncate">{doc.title}</span>
+                              <div className="min-w-0">
+                                <p className="truncate">{doc.title}</p>
+                                <p className="mt-0.5 truncate text-[11px] font-normal text-slate-400 md:hidden">
+                                  <span className="sm:hidden">{documentTypeLabels[doc.documentType]} · </span>
+                                  {formatDateTime(doc.createdAt)}
+                                </p>
+                              </div>
                             </Link>
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-600">
+                          <td className="hidden px-4 py-3 text-xs text-slate-600 sm:table-cell">
                             {documentTypeLabels[doc.documentType]}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="px-3 py-3 sm:px-4">
                             <DocumentStatusBadge status={doc.status} />
                           </td>
-                          <td className="px-4 py-3 text-xs text-slate-500">
+                          <td className="hidden px-4 py-3 text-xs text-slate-500 md:table-cell">
                             {formatDateTime(doc.createdAt)}
                           </td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-4 py-3 text-right sm:px-5">
                             <div className="inline-flex items-center gap-1">
                               <Link
                                 to={`/documents/${doc.id}`}

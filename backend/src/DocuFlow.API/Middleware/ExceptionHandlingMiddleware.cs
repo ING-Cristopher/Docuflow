@@ -76,8 +76,9 @@ public sealed class ExceptionHandlingMiddleware
     {
         "Auth.InvalidCredentials" or "Auth.Unauthenticated" => StatusCodes.Status401Unauthorized,
         "Auth.ForbiddenOrganization" or "Auth.NoOrganizationAccess" or "Auth.MissingTenantContext" or "Auth.MissingOrganization" or "Auth.InsufficientPermissions" => StatusCodes.Status403Forbidden,
-        "Document.NotFound" or "ExtractedField.NotFound" => StatusCodes.Status404NotFound,
+        "Document.NotFound" or "ExtractedField.NotFound" or "Document.FileNotFound" => StatusCodes.Status404NotFound,
         "Auth.EmailExists" or "Auth.SlugExists" or "Membership.AlreadyExists" => StatusCodes.Status409Conflict,
+        "Agent.Unavailable" or "Agent.NotConfigured" => StatusCodes.Status503ServiceUnavailable,
         _ => StatusCodes.Status400BadRequest
     };
 }

@@ -67,10 +67,22 @@ export function AppLayout() {
         event.preventDefault();
         searchInputRef.current?.focus();
       }
+      if (event.key === 'Escape' && mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [mobileMenuOpen]);
 
   if (!session) return null;
 
@@ -210,8 +222,8 @@ export function AppLayout() {
   return (
     <div className="min-h-screen bg-[#F4F7FB] lg:flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col bg-[#0F1E3D] text-white lg:flex">
-        <div className="flex h-[72px] items-center border-b border-white/10 px-5">{renderBrand()}</div>
+      <aside className="hidden w-64 shrink-0 flex-col bg-[#0F1E3D] text-white lg:sticky lg:top-0 lg:flex lg:h-screen">
+        <div className="flex h-[72px] shrink-0 items-center border-b border-white/10 px-5">{renderBrand()}</div>
 
         <div className="flex-1 overflow-y-auto">{renderNavLinks()}</div>
 
@@ -220,20 +232,28 @@ export function AppLayout() {
 
       {/* Main Content Wrapper */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-6 lg:px-8">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2.5 border-b border-slate-200/80 bg-white/95 px-3 backdrop-blur sm:gap-4 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Abrir menú de navegación"
-              className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
+              className="shrink-0 rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
             >
               <Menu className="h-5 w-5" aria-hidden="true" />
             </button>
 
-            <form onSubmit={handleGlobalSearchSubmit} className="relative w-full max-w-md">
+            <Link
+              to="/dashboard"
+              aria-label="DocuFlow AI"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-400 via-brand-500 to-indigo-600 text-xs font-bold text-white shadow-xs lg:hidden"
+            >
+              DF
+            </Link>
+
+            <form onSubmit={handleGlobalSearchSubmit} className="relative min-w-0 flex-1 max-w-md">
               <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 sm:left-3.5"
                 aria-hidden="true"
               />
               <input
@@ -241,9 +261,9 @@ export function AppLayout() {
                 type="search"
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
-                placeholder="Buscar documentos por título... (Ctrl + K)"
+                placeholder="Buscar documentos... (Ctrl + K)"
                 aria-label="Buscar documentos"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-2 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-2 pl-9 pr-3 text-xs text-slate-800 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 sm:pl-10 sm:pr-4 sm:text-sm"
               />
             </form>
           </div>
@@ -314,8 +334,8 @@ export function AppLayout() {
           </div>
         ) : null}
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
+          <div className="mx-auto w-full max-w-7xl 2xl:max-w-[1440px]">
             <Outlet />
           </div>
         </main>
