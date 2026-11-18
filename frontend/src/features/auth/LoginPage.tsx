@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, ArrowRight, Building2, Eye, EyeOff, Lock, Mail, UserRound } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Building2, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/features/auth/AuthContext';
@@ -10,17 +10,6 @@ import { LoginShowcase } from '@/features/auth/LoginShowcase';
 import { getApiErrorMessage } from '@/lib/errors';
 import { usePrefersReducedMotion } from '@/lib/usePrefersReducedMotion';
 import { loginSchema, type LoginFormValues } from '@/schemas/authSchemas';
-
-/**
- * Local-development convenience only. Vite statically replaces import.meta.env.DEV,
- * so these seed credentials are tree-shaken out of production builds.
- */
-const DEMO_ACCOUNTS = import.meta.env.DEV
-  ? [
-      { label: 'Admin', email: 'admin@docuflow.local', password: 'DocuFlow_Admin_123!' },
-      { label: 'Revisor', email: 'reviewer@docuflow.local', password: 'DocuFlow_Reviewer_123!' },
-    ]
-  : [];
 
 const inputClass =
   'block w-full rounded-xl border border-slate-200 bg-slate-50/70 py-2.5 pl-10 text-sm text-slate-900 transition-all duration-200 placeholder:text-slate-400 hover:border-slate-300 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-brand-500/15';
@@ -51,7 +40,6 @@ export function LoginPage() {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -102,12 +90,6 @@ export function LoginPage() {
     if (typeof event.getModifierState === 'function') {
       setCapsLockOn(event.getModifierState('CapsLock'));
     }
-  };
-
-  const fillDemoAccount = (email: string, password: string) => {
-    setServerError(null);
-    setValue('email', email, { shouldValidate: true, shouldDirty: true });
-    setValue('password', password, { shouldValidate: true, shouldDirty: true });
   };
 
   return (
@@ -172,26 +154,6 @@ export function LoginPage() {
               <Alert tone="error" className="animate-fade-slide-up mb-4">
                 {serverError}
               </Alert>
-            ) : null}
-
-            {DEMO_ACCOUNTS.length > 0 ? (
-              <div className="mb-5 rounded-xl border border-dashed border-slate-200 bg-slate-50/60 p-3">
-                <p className="text-[11px] font-medium text-slate-500">Entorno local · acceso rápido de demostración</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {DEMO_ACCOUNTS.map((account) => (
-                    <button
-                      key={account.email}
-                      type="button"
-                      onClick={() => fillDemoAccount(account.email, account.password)}
-                      aria-label={`Rellenar con cuenta ${account.label} de demostración`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:text-brand-700 hover:shadow-sm active:translate-y-0"
-                    >
-                      <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
-                      {account.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             ) : null}
 
             <form onSubmit={handleSubmit(onSubmit, shakeCard)} className="space-y-4" noValidate>

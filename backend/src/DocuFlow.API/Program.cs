@@ -149,17 +149,39 @@ var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+    context.Response.Headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+if (!app.Environment.IsEnvironment("Testing"))
+{
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<DocuFlowDbContext>();
     if (db.Database.IsRelational())
     {
         await db.Database.MigrateAsync();
     }
-    var initializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
-    await initializer.SeedAsync();
+
+    var seedDemoData = string.Equals(
+        app.Configuration["SEED_DEMO_DATA"] ?? app.Configuration["Database:SeedDemoData"],
+        "true",
+        StringComparison.OrdinalIgnoreCase);
+
+    if (app.Environment.IsDevelopment() && seedDemoData)
+    {
+        var initializer = scope.ServiceProvider.GetRequiredService<DbInitializer>();
+        await initializer.SeedAsync();
+    }
 }
 
 app.UseCors("FrontendPolicy");

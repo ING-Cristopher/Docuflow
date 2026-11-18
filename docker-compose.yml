@@ -31,14 +31,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      ASPNETCORE_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
       ASPNETCORE_URLS: "http://+:5000"
       POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-docuflow};Username=${POSTGRES_USER:-docuflow};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}"
       DOCUMENT_STORAGE_PATH: "/data/storage"
       DOCUMENT_STORAGE_CONTAINER: "${DOCUMENT_STORAGE_CONTAINER:-documents}"
-      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-DOCUFLOW_DEV_ONLY_FALLBACK_KEY_MIN_32_CHARS}"
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env (min 32 chars)}"
       JWT_ISSUER: "${JWT_ISSUER:-DocuFlow.Api}"
       JWT_AUDIENCE: "${JWT_AUDIENCE:-DocuFlow.Client}"
+      FRONTEND_ORIGIN: "${FRONTEND_ORIGIN:-http://localhost:${FRONTEND_PORT:-8080}}"
       Gemini__ApiKey: "${GEMINI_API_KEY:-}"
       Gemini__Model: "${GEMINI_MODEL:-gemini-3.5-flash}"
     volumes:
@@ -65,7 +66,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DOTNET_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Development}"
+      DOTNET_ENVIRONMENT: "${ASPNETCORE_ENVIRONMENT:-Production}"
       POSTGRES_CONNECTION_STRING: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-docuflow};Username=${POSTGRES_USER:-docuflow};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}"
       DOCUMENT_STORAGE_PATH: "/data/storage"
       DOCUMENT_STORAGE_CONTAINER: "${DOCUMENT_STORAGE_CONTAINER:-documents}"
@@ -73,6 +74,22 @@ services:
       Gemini__Model: "${GEMINI_MODEL:-gemini-3.5-flash}"
     volumes:
       - document_storage:/data/storage
+    networks:
+      - docuflow-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-}"
+    container_name: docuflow-frontend
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
     networks:
       - docuflow-network
 
